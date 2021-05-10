@@ -230,6 +230,21 @@ absl::optional<CelValue> UpstreamWrapper::operator[](CelValue key) const {
     }
   } else if (value == UpstreamTransportFailureReason) {
     return CelValue::CreateStringView(info_.upstreamTransportFailureReason());
+  } else if (value == UpstreamHostLocalityRegion) {
+    auto upstream_host = info_.upstreamHost();
+    if (upstream_host != nullptr) {
+      return CelValue::CreateString(&upstream_host->locality().region());
+    }
+  } else if (value == UpstreamHostLocalityZone) {
+    auto upstream_host = info_.upstreamHost();
+    if (upstream_host != nullptr) {
+      return CelValue::CreateString(&upstream_host->locality().zone());
+    }
+  } else if (value == UpstreamHostLocalitySubZone) {
+    auto upstream_host = info_.upstreamHost();
+    if (upstream_host != nullptr) {
+      return CelValue::CreateString(&upstream_host->locality().sub_zone());
+    }
   }
 
   auto ssl_info = info_.upstreamSslConnection();
