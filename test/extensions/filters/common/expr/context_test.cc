@@ -456,6 +456,8 @@ TEST(Context, ConnectionAttributes) {
 
   EXPECT_CALL(*downstream_ssl_info, peerCertificatePresented()).WillRepeatedly(Return(true));
   EXPECT_CALL(*upstream_host, address()).WillRepeatedly(Return(upstream_address));
+  envoy::config::core::v3::Locality upstream_locality = Envoy::Upstream::Locality("region", "zone", "sub_zone");
+  EXPECT_CALL(*upstream_host, locality()).WillRepeatedly(ReturnRef(upstream_locality));
 
   const std::string tls_version = "TLSv1";
   EXPECT_CALL(*downstream_ssl_info, tlsVersion()).WillRepeatedly(ReturnRef(tls_version));
@@ -544,6 +546,27 @@ TEST(Context, ConnectionAttributes) {
     EXPECT_TRUE(value.has_value());
     ASSERT_TRUE(value.value().IsInt64());
     EXPECT_EQ(679, value.value().Int64OrDie());
+  }
+
+  {
+    auto value = upstream[CelValue::CreateStringView(UpstreamHostLocalityRegion)];
+    EXPECT_TRUE(value.has_value());
+    ASSERT_TRUE(value.value().IsString());
+    EXPECT_EQ("region", value.value().StringOrDie().value());
+  }
+  
+  {
+    auto value = upstream[CelValue::CreateStringView(UpstreamHostLocalityZone)];
+    EXPECT_TRUE(value.has_value());
+    ASSERT_TRUE(value.value().IsString());
+    EXPECT_EQ("zone", value.value().StringOrDie().value());
+  }
+  
+  {
+    auto value = upstream[CelValue::CreateStringView(UpstreamHostLocalitySubZone)];
+    EXPECT_TRUE(value.has_value());
+    ASSERT_TRUE(value.value().IsString());
+    EXPECT_EQ("sub_zone", value.value().StringOrDie().value());
   }
 
   {

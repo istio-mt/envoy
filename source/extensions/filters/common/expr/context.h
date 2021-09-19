@@ -76,6 +76,9 @@ constexpr absl::string_view Destination = "destination";
 constexpr absl::string_view Upstream = "upstream";
 constexpr absl::string_view UpstreamLocalAddress = "local_address";
 constexpr absl::string_view UpstreamTransportFailureReason = "transport_failure_reason";
+constexpr absl::string_view UpstreamHostLocalityRegion = "host_locality_region";
+constexpr absl::string_view UpstreamHostLocalityZone = "host_locality_zone";
+constexpr absl::string_view UpstreamHostLocalitySubZone  = "host_locality_sub_zone";
 
 class RequestWrapper;
 
