@@ -9,6 +9,26 @@
 namespace Envoy {
 namespace Network {
 
+/* toa socket options, now only for nat64 */
+enum {
+    TOA_BASE_CTL            = 4096,
+    TOA_SO_SET_MAX          = TOA_BASE_CTL,
+    TOA_SO_GET_LOOKUP       = TOA_BASE_CTL,
+    TOA_SO_GET_MAX          = TOA_SO_GET_LOOKUP,
+};
+
+struct toa_nat64_peer {
+    struct in6_addr saddr;
+    uint16_t sport;
+};
+
+union sockaddr_types {
+    struct sockaddr_storage storage;
+    struct sockaddr addr; 
+    struct sockaddr_in in4;
+    struct sockaddr_in6 in6;
+};
+
 /**
  * libevent implementation of Network::Listener for TCP.
  */
