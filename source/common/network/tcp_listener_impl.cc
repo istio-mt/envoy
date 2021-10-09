@@ -74,6 +74,18 @@ void TcpListenerImpl::onSocketEvent(short flags) {
     // (e.g., 0.0.0.0 for IPv4) (local_address_ is nullptr in this case).
     const Address::InstanceConstSharedPtr& local_address =
         local_address_ ? local_address_ : io_handle->localAddress();
+    
+    // get huawei NAT64 TOA client real ipv6 address 
+    struct toa_nat64_peer toa_addr;
+    socklen_t toa_len = sizeof(struct toa_nat64_peer);
+    union sockaddr_types toa_remote_addr;
+    if (io_handle->getOption(IPPROTO_IP, TOA_SO_GET_LOOKUP, &toa_addr, &toa_len).rc_ == 0) {
+      toa_remote_addr.in6.sin6_family = AF_INET6;
+      toa_remote_addr.in6.sin6_port = htons(toa_addr.sport);
+      toa_remote_addr.in6.sin6_addr = toa_addr.saddr;
+      remote_addr = toa_remote_addr.storage;
+      remote_addr_len = sizeof(sockaddr_in6);
+    }
 
     // The accept() call that filled in remote_addr doesn't fill in more than the sa_family field
     // for Unix domain sockets; apparently there isn't a mechanism in the kernel to get the
