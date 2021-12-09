@@ -85,7 +85,7 @@ public:
                                const StreamInfo::StreamInfo&) const override {}
   std::string newPath(const Http::RequestHeaderMap& headers) const override;
   void rewritePathHeader(Http::RequestHeaderMap&, bool) const override {}
-  Http::Code responseCode() const override { return Http::Code::MovedPermanently; }
+  Http::Code responseCode() const override { return Http::Code::TemporaryRedirect; }
   const std::string& responseBody() const override { return EMPTY_STRING; }
   const std::string& routeName() const override { return route_name_; }
 
