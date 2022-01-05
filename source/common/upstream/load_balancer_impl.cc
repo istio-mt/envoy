@@ -9,9 +9,9 @@
 #include "envoy/runtime/runtime.h"
 #include "envoy/upstream/upstream.h"
 
-#include "source/common/common/assert.h"
-#include "source/common/common/logger.h"
-#include "source/common/protobuf/utility.h"
+#include "common/common/assert.h"
+#include "common/common/logger.h"
+#include "common/protobuf/utility.h"
 
 #include "absl/container/fixed_array.h"
 
