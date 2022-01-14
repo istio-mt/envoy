@@ -10,6 +10,7 @@
 #include "envoy/upstream/upstream.h"
 
 #include "common/common/assert.h"
+#include "common/common/logger.h"
 #include "common/protobuf/utility.h"
 
 #include "absl/container/fixed_array.h"
@@ -693,10 +694,21 @@ const HostVector& ZoneAwareLoadBalancerBase::hostSourceToHosts(HostsSource hosts
 EdfLoadBalancerBase::EdfLoadBalancerBase(
     const PrioritySet& priority_set, const PrioritySet* local_priority_set, ClusterStats& stats,
     Runtime::Loader& runtime, Random::RandomGenerator& random,
-    const envoy::config::cluster::v3::Cluster::CommonLbConfig& common_config)
+    const envoy::config::cluster::v3::Cluster::CommonLbConfig& common_config,
+    const absl::optional<envoy::config::cluster::v3::Cluster::SlowStartConfig> slow_start_config,
+    TimeSource& time_source)
     : ZoneAwareLoadBalancerBase(priority_set, local_priority_set, stats, runtime, random,
                                 common_config),
-      seed_(random_.random()) {
+      seed_(random_.random()),
+      slow_start_window_(slow_start_config.has_value()
+                             ? std::chrono::milliseconds(DurationUtil::durationToMilliseconds(
+                                   slow_start_config.value().slow_start_window()))
+                             : std::chrono::milliseconds(0)),
+      aggression_runtime_(
+          slow_start_config.has_value() && slow_start_config.value().has_aggression()
+              ? absl::optional<Runtime::Double>({slow_start_config.value().aggression(), runtime})
+              : absl::nullopt),
+      time_source_(time_source), latest_host_added_time_(time_source_.monotonicTime()) {
   // We fully recompute the schedulers for a given host set here on membership change, which is
   // consistent with what other LB implementations do (e.g. thread aware).
   // The downside of a full recompute is that time complexity is O(n * log n),
@@ -704,6 +716,12 @@ EdfLoadBalancerBase::EdfLoadBalancerBase(
   // https://github.com/envoyproxy/envoy/issues/2874).
   priority_set.addPriorityUpdateCb(
       [this](uint32_t priority, const HostVector&, const HostVector&) { refresh(priority); });
+  member_update_cb_ = priority_set.addMemberUpdateCb(
+      [this](const HostVector& hosts_added, const HostVector&) -> void {
+        if (isSlowStartEnabled()) {
+          recalculateHostsInSlowStart(hosts_added);
+        }
+      });
 }
 
 void EdfLoadBalancerBase::initialize() {
@@ -712,20 +730,38 @@ void EdfLoadBalancerBase::initialize() {
   }
 }
 
+void EdfLoadBalancerBase::recalculateHostsInSlowStart(const HostVector& hosts) {
+  auto current_time = time_source_.monotonicTime();
+  // TODO(nezdolik): linear scan can be improved with using flat hash set for hosts in slow start.
+  for (const auto& host : hosts) {
+    auto host_create_duration =
+        std::chrono::duration_cast<std::chrono::milliseconds>(current_time - host->creationTime());
+    // Check if host existence time is within slow start window.
+    if (host->creationTime() > latest_host_added_time_ &&
+        host_create_duration <= slow_start_window_ &&
+        host->health() == Upstream::Host::Health::Healthy) {
+      latest_host_added_time_ = host->creationTime();
+    }
+  }
+}
+
 void EdfLoadBalancerBase::refresh(uint32_t priority) {
   const auto add_hosts_source = [this](HostsSource source, const HostVector& hosts) {
     // Nuke existing scheduler if it exists.
     auto& scheduler = scheduler_[source] = Scheduler{};
     refreshHostSource(source);
+    if (isSlowStartEnabled()) {
+      recalculateHostsInSlowStart(hosts);
+    }
 
-    // Check if the original host weights are equal and skip EDF creation if they are. When all
-    // original weights are equal we can rely on unweighted host pick to do optimal round robin and
-    // least-loaded host selection with lower memory and CPU overhead.
-    if (hostWeightsAreEqual(hosts)) {
+    // Check if the original host weights are equal and no hosts are in slow start mode, in that
+    // case EDF creation is skipped. When all original weights are equal and no hosts are in slow
+    // start mode we can rely on unweighted host pick to do optimal round robin and least-loaded
+    // host selection with lower memory and CPU overhead.
+    if (hostWeightsAreEqual(hosts) && noHostsAreInSlowStart()) {
       // Skip edf creation.
       return;
     }
-
     scheduler.edf_ = std::make_unique<EdfScheduler<const Host>>();
 
     // Populate scheduler with host list.
@@ -751,7 +787,6 @@ void EdfLoadBalancerBase::refresh(uint32_t priority) {
       }
     }
   };
-
   // Populate EdfSchedulers for each valid HostsSource value for the host set at this priority.
   const auto& host_set = priority_set_.hostSetsPerPriority()[priority];
   add_hosts_source(HostsSource(priority, HostsSource::SourceType::AllHosts), host_set->hosts());
@@ -771,6 +806,22 @@ void EdfLoadBalancerBase::refresh(uint32_t priority) {
         HostsSource(priority, HostsSource::SourceType::LocalityDegradedHosts, locality_index),
         host_set->degradedHostsPerLocality().get()[locality_index]);
   }
+}
+
+bool EdfLoadBalancerBase::isSlowStartEnabled() {
+  return slow_start_window_ > std::chrono::milliseconds(0);
+}
+
+bool EdfLoadBalancerBase::noHostsAreInSlowStart() {
+  if (!isSlowStartEnabled()) {
+    return true;
+  }
+  auto current_time = time_source_.monotonicTime();
+  if (std::chrono::duration_cast<std::chrono::milliseconds>(
+          current_time - latest_host_added_time_) <= slow_start_window_) {
+    return false;
+  }
+  return true;
 }
 
 HostConstSharedPtr EdfLoadBalancerBase::peekAnotherHost(LoadBalancerContext* context) {
@@ -827,6 +878,28 @@ HostConstSharedPtr EdfLoadBalancerBase::chooseHostOnce(LoadBalancerContext* cont
   }
 }
 
+double EdfLoadBalancerBase::applyAggressionFactor(double time_factor) {
+  if (aggression_ == 1.0 || time_factor == 1.0) {
+    return time_factor;
+  } else {
+    return std::pow(time_factor, 1.0 / aggression_);
+  }
+}
+
+double EdfLoadBalancerBase::applySlowStartFactor(double host_weight, const Host& host) {
+  auto host_create_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+      time_source_.monotonicTime() - host.creationTime());
+  if (host_create_duration < slow_start_window_ &&
+      host.health() == Upstream::Host::Health::Healthy) {
+    // (TODO:@jiangshantao-dbg) formula will result a very small new_weight, then cause the edf_scheduler deadline a very big value.
+    // so here we use a static value of 0.3 which means slow start mode endpiont just receive 30% traffic as the normal one.
+    // we can use the aggression_ as the percentage config if this way is just ok.
+    return host_weight * 0.3;
+  } else {
+    return host_weight;
+  }
+}
+
 HostConstSharedPtr LeastRequestLoadBalancer::unweightedHostPeek(const HostVector&,
                                                                 const HostsSource&) {
   // LeastRequestLoadBalancer can not do deterministic preconnecting, because
@@ -838,11 +911,13 @@ HostConstSharedPtr LeastRequestLoadBalancer::unweightedHostPeek(const HostVector
 HostConstSharedPtr LeastRequestLoadBalancer::unweightedHostPick(const HostVector& hosts_to_use,
                                                                 const HostsSource&) {
   HostSharedPtr candidate_host = nullptr;
+
   for (uint32_t choice_idx = 0; choice_idx < choice_count_; ++choice_idx) {
     const int rand_idx = random_.random() % hosts_to_use.size();
     HostSharedPtr sampled_host = hosts_to_use[rand_idx];
 
     if (candidate_host == nullptr) {
+
       // Make a first choice to start the comparisons.
       candidate_host = sampled_host;
       continue;
