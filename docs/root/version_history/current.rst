@@ -26,6 +26,7 @@ Bug Fixes
 * ext_authz: fix the ext_authz filter to correctly merge multiple same headers using the ',' as separator in the check request to the external authorization service.
 * http: limit use of deferred resets in the http2 codec to server-side connections. Use of deferred reset for client connections can result in incorrect behavior and performance problems.
 * jwt_authn: unauthorized responses now correctly include a `www-authenticate` header.
+* upstream: cluster slow start config add ``min_weight_percent`` field to avoid too big EDF deadline which cause slow start endpoints receiving no traffic, default 10%. This fix is releted to `issue#19526 <https://github.com/envoyproxy/envoy/issues/19526>`_.
 
 Removed Config or Runtime
 -------------------------
