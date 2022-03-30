@@ -103,6 +103,7 @@ envoy_cc_library(
         "abseil_inlined_vector",
     ],
     deps = [
+        ":header_formatter_interface",
         "//source/common/common:assert_lib",
         "//source/common/common:hash_lib",
     ],
@@ -138,5 +139,13 @@ envoy_cc_library(
     hdrs = ["request_id_extension.h"],
     deps = [
         ":header_map_interface",
+    ],
+)
+
+envoy_cc_library(
+    name = "header_formatter_interface",
+    hdrs = ["header_formatter.h"],
+    deps = [
+        "//include/envoy/config:typed_config_interface",
     ],
 )

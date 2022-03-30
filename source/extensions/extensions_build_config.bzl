@@ -34,6 +34,7 @@ EXTENSIONS = {
     #
     # WASM
     #
+
     "envoy.bootstrap.wasm":                             "//source/extensions/bootstrap/wasm:config",
 
     #
@@ -205,6 +206,7 @@ EXTENSIONS = {
     #
     # Internal redirect predicates
     #
+
     "envoy.internal_redirect_predicates.allow_listed_routes": "//source/extensions/internal_redirect/allow_listed_routes:config",
     "envoy.internal_redirect_predicates.previous_routes":     "//source/extensions/internal_redirect/previous_routes:config",
     "envoy.internal_redirect_predicates.safe_cross_scheme":   "//source/extensions/internal_redirect/safe_cross_scheme:config",
@@ -212,6 +214,7 @@ EXTENSIONS = {
     #
     # Http Upstreams (excepting envoy.upstreams.http.generic which is hard-coded into the build so not registered here)
     #
+
     "envoy.upstreams.http.http":                        "//source/extensions/upstreams/http/http:config",
     "envoy.upstreams.http.tcp":                         "//source/extensions/upstreams/http/tcp:config",
 
@@ -235,6 +238,12 @@ EXTENSIONS = {
     #
 
     "envoy.rate_limit_descriptors.expr":                "//source/extensions/rate_limit_descriptors/expr:config",
+
+    #
+    # HTTP header formatters
+    #
+
+    "envoy.http.stateful_header_formatters.preserve_case":       "//source/extensions/http/header_formatters/preserve_case:preserve_case_formatter"
 }
 
 # These can be changed to ["//visibility:public"], for  downstream builds which
