@@ -35,8 +35,7 @@ Http1Settings parseHttp1Settings(const envoy::config::core::v3::Http1ProtocolOpt
 
 Http1Settings parseHttp1Settings(const envoy::config::core::v3::Http1ProtocolOptions& config,
                                  ProtobufMessage::ValidationVisitor& validation_visitor,
-                                 const Protobuf::BoolValue& hcm_stream_error,
-                                 bool validate_scheme) {
+                                 const Protobuf::BoolValue& hcm_stream_error) {
   Http1Settings ret = parseHttp1Settings(config, validation_visitor);
 
   if (config.has_override_stream_error_on_invalid_http_message()) {
