@@ -3,6 +3,7 @@
 #include "envoy/http/header_formatter.h"
 
 #include "common/common/utility.h"
+#include "common/http/http1/header_formatter.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -18,6 +19,7 @@ public:
 
 private:
   StringUtil::CaseUnorderedSet original_header_keys_;
+  Envoy::Http::Http1::ProperCaseHeaderKeyFormatter proper_case_header_key_formatter_;
 };
 
 } // namespace PreserveCase

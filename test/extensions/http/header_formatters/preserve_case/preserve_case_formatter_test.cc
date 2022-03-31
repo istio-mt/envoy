@@ -19,7 +19,9 @@ TEST(PreserveCaseFormatterTest, All) {
   EXPECT_EQ("Bar", formatter.format("bar"));
   EXPECT_EQ("Bar", formatter.format("Bar"));
   EXPECT_EQ("Bar", formatter.format("BAR"));
-  EXPECT_EQ("baz", formatter.format("baz"));
+  EXPECT_EQ("Baz", formatter.format("baz"));
+  EXPECT_EQ("HeLLO", formatter.format("heLLO"));
+  EXPECT_EQ("Hello-World", formatter.format("hello-world"));
 }
 
 } // namespace PreserveCase

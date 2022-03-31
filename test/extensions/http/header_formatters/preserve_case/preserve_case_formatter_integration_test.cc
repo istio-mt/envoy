@@ -13,11 +13,13 @@ public:
   Http::FilterHeadersStatus decodeHeaders(Http::RequestHeaderMap& headers, bool) override {
     headers.addCopy(Http::LowerCaseString("request-header"), "request-header-value");
     headers.formatter()->processKey("Request-Header");
+    headers.addCopy(Http::LowerCaseString("x-forwarded-for"), "x-forwarded-for-value");
     return Http::FilterHeadersStatus::Continue;
   }
   Http::FilterHeadersStatus encodeHeaders(Http::ResponseHeaderMap& headers, bool) override {
     headers.addCopy(Http::LowerCaseString("response-header"), "response-header-value");
     headers.formatter()->processKey("Response-Header");
+    headers.addCopy(Http::LowerCaseString("server"), "server-value");
     return Http::FilterHeadersStatus::Continue;
   }
 };
@@ -90,6 +92,7 @@ TEST_P(PreserveCaseIntegrationTest, EndToEnd) {
   EXPECT_TRUE(absl::StrContains(upstream_request, "My-Request-Header: foo"));
   EXPECT_TRUE(absl::StrContains(upstream_request, "HOst: host"));
   EXPECT_TRUE(absl::StrContains(upstream_request, "Request-Header: request-header-value"));
+  EXPECT_TRUE(absl::StrContains(upstream_request, "X-Forwarded-For: 1.2.3.4"));
 
   // Verify that the downstream response has preserved cased headers.
   auto response =
@@ -100,6 +103,7 @@ TEST_P(PreserveCaseIntegrationTest, EndToEnd) {
   tcp_client->waitForData("Content-Length: 0", false);
   tcp_client->waitForData("My-Response-Header: foo", false);
   tcp_client->waitForData("Response-Header: response-header-value", false);
+  tcp_client->waitForData("Server: server-value", false);
   tcp_client->close();
 }
 

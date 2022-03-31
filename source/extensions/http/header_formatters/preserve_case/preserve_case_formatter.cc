@@ -22,7 +22,7 @@ std::string PreserveCaseHeaderFormatter::format(absl::string_view key) const {
   if (remembered_key_itr != original_header_keys_.end()) {
     return *remembered_key_itr;
   } else {
-    return std::string(key);
+    return proper_case_header_key_formatter_.format(key);
   }
 }
 
