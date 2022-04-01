@@ -676,14 +676,6 @@ createOptions(const envoy::config::cluster::v3::Cluster& config,
     return std::move(options);
   }
 
-  if (config.protocol_selection() == envoy::config::cluster::v3::Cluster::USE_CONFIGURED_PROTOCOL) {
-    // Make sure multiple protocol configurations are not present
-    if (config.has_http_protocol_options() && config.has_http2_protocol_options()) {
-      throw EnvoyException(fmt::format("cluster: Both HTTP1 and HTTP2 options may only be "
-                                       "configured with non-default 'protocol_selection' values"));
-    }
-  }
-
   return std::make_shared<ClusterInfoImpl::HttpProtocolOptionsConfigImpl>(
       config.http_protocol_options(), config.http2_protocol_options(),
       config.common_http_protocol_options(),
