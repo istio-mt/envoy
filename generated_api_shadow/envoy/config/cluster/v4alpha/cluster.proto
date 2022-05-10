@@ -340,6 +340,9 @@ message Cluster {
 
   // Configuration for :ref:`slow start mode <arch_overview_load_balancing_slow_start>`.
   message SlowStartConfig {
+    option (udpa.annotations.versioning).previous_message_type =
+        "envoy.config.cluster.v3.Cluster.SlowStartConfig";
+
     // Represents the size of slow start window.
     // If set, the newly created host remains in slow start mode starting from its creation time
     // for the duration of slow start window.
@@ -352,16 +355,24 @@ message Cluster {
     // By tuning the parameter, is possible to achieve polynomial or exponential shape of ramp-up curve.
     //
     // During slow start window, effective weight of an endpoint would be scaled with time factor and aggression:
-    // `new_weight = weight * time_factor ^ (1 / aggression)`,
+    // `new_weight = weight * max(min_weight_percent, time_factor ^ (1 / aggression))`,
     // where `time_factor=(time_since_start_seconds / slow_start_time_seconds)`.
     //
     // As time progresses, more and more traffic would be sent to endpoint, which is in slow start window.
     // Once host exits slow start, time_factor and aggression no longer affect its weight.
     core.v4alpha.RuntimeDouble aggression = 2;
+
+    // Configures the minimum percentage of origin weight that avoids too small new weight,
+    // which may cause endpoints in slow start mode receive no traffic in slow start window.
+    // If not specified, the default is 10%.
+    type.v3.Percent min_weight_percent = 3;
   }
 
   // Specific configuration for the RoundRobin load balancing policy.
   message RoundRobinLbConfig {
+    option (udpa.annotations.versioning).previous_message_type =
+        "envoy.config.cluster.v3.Cluster.RoundRobinLbConfig";
+
     // Configuration for slow start mode.
     // If this configuration is not set, slow start will not be not enabled.
     SlowStartConfig slow_start_config = 1;
@@ -958,7 +969,7 @@ message Cluster {
     LeastRequestLbConfig least_request_lb_config = 37;
 
     // Optional configuration for the RoundRobin load balancing policy.
-    RoundRobinLbConfig round_robin_lb_config = 56;   
+    RoundRobinLbConfig round_robin_lb_config = 56;
   }
 
   // Common configuration for all load balancer implementations.
