@@ -134,7 +134,6 @@ message Http1ProtocolOptions {
 
       // Configuration for stateful formatter extensions that allow using received headers to
       // affect the output of encoding headers. E.g., preserving case during proxying.
-      // [#extension-category: envoy.http.stateful_header_formatters]
       TypedExtensionConfig stateful_formatter = 8;
     }
   }
