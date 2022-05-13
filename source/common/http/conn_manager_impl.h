@@ -442,6 +442,8 @@ private:
   const Server::OverloadActionState& overload_disable_keepalive_ref_;
   TimeSource& time_source_;
   bool remote_close_{};
+  // The number of requests accumulated on the current connection.
+  uint64_t accumulated_requests_{};
 };
 
 } // namespace Http

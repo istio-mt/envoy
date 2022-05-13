@@ -182,6 +182,7 @@ public:
       pathWithEscapedSlashesAction() const override {
     return path_with_escaped_slashes_action_;
   }
+  uint64_t maxRequestsPerConnection() const override { return max_requests_per_connection_; }
 
 private:
   enum class CodecType { HTTP1, HTTP2, HTTP3, AUTO };
@@ -269,6 +270,7 @@ private:
   static const uint64_t RequestHeaderTimeoutMs = 0;
   const envoy::extensions::filters::network::http_connection_manager::v3::HttpConnectionManager::
       PathWithEscapedSlashesAction path_with_escaped_slashes_action_;
+  const uint64_t max_requests_per_connection_;
 };
 
 /**
