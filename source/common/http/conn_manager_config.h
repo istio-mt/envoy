@@ -34,6 +34,7 @@ namespace Http {
   COUNTER(downstream_cx_http3_total)                                                               \
   COUNTER(downstream_cx_idle_timeout)                                                              \
   COUNTER(downstream_cx_max_duration_reached)                                                      \
+  COUNTER(downstream_cx_max_requests_reached)                                                      \
   COUNTER(downstream_cx_overload_disable_keepalive)                                                \
   COUNTER(downstream_cx_protocol_error)                                                            \
   COUNTER(downstream_cx_rx_bytes_total)                                                            \
@@ -476,6 +477,11 @@ public:
   virtual envoy::extensions::filters::network::http_connection_manager::v3::HttpConnectionManager::
       PathWithEscapedSlashesAction
       pathWithEscapedSlashesAction() const PURE;
+
+  /**
+   * @return maximum requests for downstream.
+   */
+  virtual uint64_t maxRequestsPerConnection() const PURE;
 };
 } // namespace Http
 } // namespace Envoy

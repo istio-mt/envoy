@@ -212,6 +212,7 @@ public:
     return envoy::extensions::filters::network::http_connection_manager::v3::HttpConnectionManager::
         KEEP_UNCHANGED;
   }
+  uint64_t maxRequestsPerConnection() const override { return 0; }
 
   const envoy::extensions::filters::network::http_connection_manager::v3::HttpConnectionManager
       config_;
