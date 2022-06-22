@@ -16,6 +16,7 @@ Minor Behavior Changes
   `envoy.reloadable_features.http_strip_fragment_from_path_unsafe_if_disabled`. This runtime guard must only be set
   to false when existing non-compliant traffic relies on #fragment in URI. When this option is enabled, Envoy request
   authorization extensions may be bypassed. This override and its associated behavior will be decommissioned after the standard deprecation period.
+* http: when envoy run out of ``max_requests_per_connection``, it will send an HTTP/2 "shutdown nofitication" (GOAWAY frame with max stream ID) and go to a default grace period of 5000 milliseconds (5 seconds) if ``drain_timeout`` is not specified. During this grace period, envoy will continue to accept new streams. After the grace period, a final GOAWAY is sent and envoy will start refusing new streams. However before bugfix, during the grace period, every time a new stream is received, old envoy will always send a "shutdown notification" and restart drain again which actually causes the grace period to be extended and is no longer equal to ``drain_timeout``.
 
 Bug Fixes
 ---------
